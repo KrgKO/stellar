@@ -5,6 +5,11 @@ services:
     container_name: stellar
     volumes:
       - ./stellar:/opt/stellar
+    environment:
+      - NETWORK=testnet
+      - PGPASS=password
     ports:
-      - '8001:8000'
-    command: ['--testnet']
+      - '8000:8000'
+      - '11625:11625'
+      - '11626:11626'
+    
