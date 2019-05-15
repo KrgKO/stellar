@@ -1,0 +1,10 @@
+version: '3'
+services:
+  stellar:
+    image: stellar/quickstart
+    container_name: stellar
+    volumes:
+      - ./stellar:/opt/stellar
+    ports:
+      - '8001:8000'
+    command: ['--testnet']
