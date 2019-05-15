@@ -13,9 +13,15 @@ Stellar blockchain is a one of popular blockchain which is public blockchain
     2. federated leader selection - select pseudorandom leaders
 **ref:** http://www.scs.stanford.edu/~dm/blog/simplified-scp.html
 
+## Install Golang package
+To install golang package use command `go get github.com/stellar/go`
+
+If got an error install other dependencies `go get ./...`
+
+
 ## Getting start
 
-1. Start stellar horizon using docker-compose
+1. Start stellar horizon using docker-compose more information: https://hub.docker.com/r/stellar/quickstart/
 ```
     docker-compose up -d
 ```
