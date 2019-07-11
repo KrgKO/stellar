@@ -5,8 +5,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"origincert-chaincode/errors"
 	"os"
+
+	"github.com/pkg/errors"
 
 	"github.com/stellar/go/clients/horizon"
 	"github.com/stellar/go/keypair"
