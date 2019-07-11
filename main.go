@@ -60,8 +60,8 @@ func GenerateAddress() (string, error) {
 	return address, nil
 }
 
-// CreateAccount will lend XLM from bot
-func CreateAccount(address string) error {
+// LendXLM will lend XLM from bot
+func LendXLM(address string) error {
 	resp, err := http.Get("https://friendbot.stellar.org/?addr=" + address)
 	if err != nil {
 		return err
@@ -108,7 +108,7 @@ func main() {
 		userAddress = address
 	}
 
-	err := CreateAccount(userAddress)
+	err := LendXLM(userAddress)
 	if err != nil {
 		log.Fatal(err)
 	}
