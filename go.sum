@@ -66,6 +66,7 @@ github.com/smartystreets/goconvey v0.0.0-20190710185942-9d28bd7c0945 h1:N8Bg45zp
 github.com/smartystreets/goconvey v0.0.0-20190710185942-9d28bd7c0945/go.mod h1:syvi0/a8iFYH4r/RixwvyeAJjdLS9QV7WQ/tjFTllLA=
 github.com/stellar/go v0.0.0-20190529183928-6dfd3e31e556 h1:dOzPlPy2gIueRzNgwdsmw/ghCru7fduGSnep9sbF5nM=
 github.com/stellar/go v0.0.0-20190529183928-6dfd3e31e556/go.mod h1:Kkro8X6IWn/5XtSicGd6N2LZKMKUCWS5wS5Ctjh6+Vw=
+github.com/stellar/go v0.0.0-20190710125739-7b9e06e2c4d7 h1:clPTaZDYezDQQCIdzg7bov24drYO7LIEDzF5XMW0vhE=
 github.com/stellar/go-xdr v0.0.0-20180917104419-0bc96f33a18e h1:n/hfey8pO+RYMoGXyvyzuw5pdO8IFDoyAL/g5OiCesY=
 github.com/stellar/go-xdr v0.0.0-20180917104419-0bc96f33a18e/go.mod h1:gpOLVzy6TVYTQ3LvHSN9RJC700FkhFCpSE82u37aNRM=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

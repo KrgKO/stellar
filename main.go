@@ -6,11 +6,15 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/pkg/errors"
 
 	"github.com/stellar/go/clients/horizon"
+	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
+	"github.com/stellar/go/network"
+	"github.com/stellar/go/txnbuild"
 )
 
 func writeToFile(secret string, address string) error {
@@ -29,7 +33,7 @@ func writeToFile(secret string, address string) error {
 		return err
 	}
 
-	_, err = f.WriteString(fmt.Sprintf("%s|%s\r\n", secret, address))
+	_, err = f.WriteString(fmt.Sprintf("%s %s %s\r\n", secret, address, network.TestNetworkPassphrase))
 	if err != nil {
 		return err
 	}
@@ -93,28 +97,141 @@ func GetAccountDetails(address string) error {
 	return nil
 }
 
+// GenerateTransaction will create stellar transaction and commit on testnet
+func GenerateTransaction(source string, destination string, amount string) (string, error) {
+	// Retrieve account information
+	client := horizonclient.DefaultTestNetClient
+	accountRequest := horizonclient.AccountRequest{AccountID: source}
+	sourceRetrieved, err := client.AccountDetail(accountRequest)
+	if err != nil {
+		return "", err
+	}
+
+	// Create operation
+	accountOperation := txnbuild.CreateAccount{
+		Destination: destination,
+		Amount:      amount,
+	}
+
+	// Generate transaction
+	tx := txnbuild.Transaction{
+		SourceAccount: &sourceRetrieved,
+		Operations:    []txnbuild.Operation{&accountOperation},
+		Timebounds:    txnbuild.NewTimeout(300),
+		Network:       network.TestNetworkPassphrase,
+	}
+
+	var byte32 [32]byte
+
+	// filename := "./accounts"
+	// f, err := os.Open(filename)
+	// if err != nil {
+	// 	log.Fatalln((err))
+	// }
+	// defer f.Close()
+	// scanner := bufio.NewScanner(f)
+	// for scanner.Scan() {
+	// 	s := strings.Split(scanner.Text(), " ")
+	// 	if source == s[1] {
+	// 		for k, v := range []byte(s[0]) {
+	// 			byte32[k] = v
+	// 		}
+	// 		log.Println(s[0], s[1], []byte(s[0]), byte32)
+	// 	}
+	// }
+
+	// TODO: Find way to retrieve keypair
+	newKeypair, err := keypair.FromRawSeed(byte32)
+	if err != nil {
+		return "", err
+	}
+
+	log.Println(newKeypair)
+	// Sign transaction
+	txBase64, err := tx.BuildSignEncode(newKeypair)
+	if err != nil {
+		return "", err
+	}
+
+	fmt.Println("Transaction:", txBase64)
+
+	response, err := client.SubmitTransactionXDR(txBase64)
+	if err != nil {
+		horizonError := err.(*horizonclient.Error)
+		log.Printf("Response error: %#v\n", horizonError.Response)
+		return "", horizonError
+	}
+
+	return response.TransactionSuccessToString(), nil
+}
+
 func main() {
-	var userAddress string
+	var source string
+	var destination string
+	var amount string
+	var flag string
 
-	fmt.Printf("Input your address: ")
-	fmt.Scanf("%s", &userAddress)
+	fmt.Printf("Create new account (y/n): ")
+	fmt.Scanf("%s", &flag)
 
-	if userAddress == "" {
+	if flag == "y" {
 		address, err := GenerateAddress()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		userAddress = address
+		source = address
+
+		// Can work only new account
+		err = LendXLM(source)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		os.Exit(0)
 	}
 
-	err := LendXLM(userAddress)
+	fmt.Printf("Input source address: ")
+	fmt.Scanf("%s", &source)
+
+	if source == "" {
+		log.Fatalln("Source is required !")
+		os.Exit(1)
+	}
+
+	err := GetAccountDetails(source)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = GetAccountDetails(userAddress)
+	fmt.Printf("Input destination address: ")
+	fmt.Scanf("%s", &destination)
+
+	if destination == "" {
+		log.Fatalln("Destination is required !")
+		os.Exit(1)
+	}
+
+	err = GetAccountDetails(destination)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	fmt.Println("===========================")
+	fmt.Printf("Input amount to transfer: ")
+	fmt.Scanf("%s", &amount)
+
+	amountToInt, err := strconv.Atoi(amount)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	if amountToInt > 0 {
+		result, err := GenerateTransaction(source, destination, amount)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		log.Println("Transaction response:", result)
 	}
 }
