@@ -1,20 +1,20 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 
+	"github.com/stellar/go/build"
 	"github.com/stellar/go/clients/horizon"
-	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
-	"github.com/stellar/go/network"
-	"github.com/stellar/go/txnbuild"
 )
 
 func writeToFile(secret string, address string) error {
@@ -33,7 +33,7 @@ func writeToFile(secret string, address string) error {
 		return err
 	}
 
-	_, err = f.WriteString(fmt.Sprintf("%s %s %s\r\n", secret, address, network.TestNetworkPassphrase))
+	_, err = f.WriteString(fmt.Sprintf("%s %s\r\n", secret, address))
 	if err != nil {
 		return err
 	}
@@ -97,72 +97,65 @@ func GetAccountDetails(address string) error {
 	return nil
 }
 
+// RetrieveSeed will retrieve secret by public key
+func RetrieveSeed(sourceAddress string) (string, error) {
+	var seed string
+
+	f, err := os.Open("./accounts")
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		s := strings.Split(scanner.Text(), " ")
+		if sourceAddress == s[1] {
+			seed = s[0]
+		}
+	}
+
+	return seed, nil
+}
+
 // GenerateTransaction will create stellar transaction and commit on testnet
 func GenerateTransaction(source string, destination string, amount string) (string, error) {
-	// Retrieve account information
-	client := horizonclient.DefaultTestNetClient
-	accountRequest := horizonclient.AccountRequest{AccountID: source}
-	sourceRetrieved, err := client.AccountDetail(accountRequest)
+
+	sourceSecret, err := RetrieveSeed(source)
 	if err != nil {
 		return "", err
 	}
 
-	// Create operation
-	accountOperation := txnbuild.CreateAccount{
-		Destination: destination,
-		Amount:      amount,
-	}
-
-	// Generate transaction
-	tx := txnbuild.Transaction{
-		SourceAccount: &sourceRetrieved,
-		Operations:    []txnbuild.Operation{&accountOperation},
-		Timebounds:    txnbuild.NewTimeout(300),
-		Network:       network.TestNetworkPassphrase,
-	}
-
-	var byte32 [32]byte
-
-	// filename := "./accounts"
-	// f, err := os.Open(filename)
-	// if err != nil {
-	// 	log.Fatalln((err))
-	// }
-	// defer f.Close()
-	// scanner := bufio.NewScanner(f)
-	// for scanner.Scan() {
-	// 	s := strings.Split(scanner.Text(), " ")
-	// 	if source == s[1] {
-	// 		for k, v := range []byte(s[0]) {
-	// 			byte32[k] = v
-	// 		}
-	// 		log.Println(s[0], s[1], []byte(s[0]), byte32)
-	// 	}
-	// }
-
-	// TODO: Find way to retrieve keypair
-	newKeypair, err := keypair.FromRawSeed(byte32)
+	// Build transaction
+	tx, err := build.Transaction(
+		build.TestNetwork,
+		build.SourceAccount{sourceSecret},
+		build.AutoSequence{horizon.DefaultTestNetClient},
+		build.Payment(
+			build.Destination{destination},
+			build.NativeAmount{amount},
+		),
+	)
 	if err != nil {
 		return "", err
 	}
 
-	log.Println(newKeypair)
-	// Sign transaction
-	txBase64, err := tx.BuildSignEncode(newKeypair)
+	txSigned, err := tx.Sign(sourceSecret)
 	if err != nil {
 		return "", err
 	}
 
-	fmt.Println("Transaction:", txBase64)
-
-	response, err := client.SubmitTransactionXDR(txBase64)
+	txSignedBase64, err := txSigned.Base64()
 	if err != nil {
-		horizonError := err.(*horizonclient.Error)
-		log.Printf("Response error: %#v\n", horizonError.Response)
-		return "", horizonError
+		return "", err
 	}
 
-	return response.TransactionSuccessToString(), nil
+	response, err := horizon.DefaultTestNetClient.SubmitTransaction(txSignedBase64)
+	if err != nil {
+		return "", err
+	}
+
+	log.Println("Response transaction: ", response)
+	return response.Hash, nil
 }
 
 func main() {
@@ -227,11 +220,11 @@ func main() {
 	}
 
 	if amountToInt > 0 {
-		result, err := GenerateTransaction(source, destination, amount)
+		txHash, err := GenerateTransaction(source, destination, amount)
 		if err != nil {
 			log.Fatalln(err)
 		}
 
-		log.Println("Transaction response:", result)
+		log.Println("Transaction Hash:", txHash)
 	}
 }
