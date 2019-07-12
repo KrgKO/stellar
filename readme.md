@@ -18,10 +18,15 @@ To install golang package use command `go get github.com/stellar/go`
 
 If got an error install other dependencies `go get ./...`
 
+Or if want to use go version 1.11+ `go mod tidy`
 
 ## Getting start
 
 1. Start stellar horizon using docker-compose more information: https://hub.docker.com/r/stellar/quickstart/
 ```
     docker-compose up -d
+```
+2. Run golang source code
+```
+    go run main.go
 ```
